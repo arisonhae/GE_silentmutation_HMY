@@ -109,7 +109,7 @@ def diff_edit(wt: str, ed: str) -> tuple[int, str, str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Contiguous codon_lookup (no introns — in-frame assumption)  [UNCHANGED]
+# Contiguous codon_lookup (no introns — in-frame assumption)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _build_codon_lookup(
@@ -140,7 +140,7 @@ def _build_codon_lookup(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Exon-aware codon_lookup (single exonic segment of the window)  [NEW]
+# Exon-aware codon_lookup (single exonic segment of the window)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _build_codon_lookup_exon(
