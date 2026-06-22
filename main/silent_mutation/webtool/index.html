@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Silent Mutation Finder</title>
+<style>
+  :root{
+    --ink:#16242e; --muted:#5b6b76; --line:#e2e7ec; --panel:#ffffff;
+    --bg:#f4f6f8; --accent:#0f766e; --accent-d:#0c5d56; --accent-soft:#e3f1ef;
+    /* prime-editing diagram palette */
+    --c-bg:#eef0f2; --c-rtt:#c5dcf3; --c-pbs:#f5e6a0; --c-pam:#d9c2ec;
+    --c-variant:#f3b0ac; --c-silent:#b8e0c2; --nick:#d4351c;
+    /* frame-bar palette */
+    --aa:#fce6c9; --aa-ink:#9a6b1e; --codon:#d99b3c; --intron:#eef1f3; --leftover:#f7eccd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  header{background:linear-gradient(180deg,#11343a,#0f766e);color:#fff;
+         padding:22px 0 20px;border-bottom:3px solid var(--accent-d)}
+  header .in{max-width:1120px;margin:0 auto;padding:0 22px}
+  header h1{margin:0;font-size:21px;letter-spacing:.2px}
+  header p{margin:4px 0 0;color:#cfe9e5;font-size:13.5px}
+
+  .page{max-width:1120px;margin:22px auto;padding:0 22px;display:flex;flex-direction:column;gap:18px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid > *{min-width:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+        box-shadow:0 1px 2px rgba(20,36,46,.04);padding:18px}
+  .card h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;
+           letter-spacing:.06em;color:var(--muted)}
+  .card h2 .n{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;
+           background:var(--accent);color:#fff;border-radius:6px;margin-right:8px;font-size:12px}
+  label{display:block;font-size:12.5px;color:var(--muted);margin:12px 0 4px;font-weight:600}
+  textarea,input,select{width:100%;border:1px solid var(--line);border-radius:8px;
+        padding:8px 9px;font-size:13px;color:var(--ink);background:#fcfdfe}
+  textarea{resize:vertical;min-height:58px}
+  textarea.mono{font-size:12px;line-height:1.45}
+  .seqgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:680px){.seqgrid{grid-template-columns:1fr}}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:4px}
+  .seg button{flex:1;border:0;background:#fff;padding:8px;font-size:12.5px;color:var(--muted);cursor:pointer}
+  .seg button.on{background:var(--accent-soft);color:var(--accent-d);font-weight:700}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  summary{cursor:pointer;font-size:12.5px;color:var(--accent-d);font-weight:600}
+  .chk{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px}
+  .chk input{width:auto}
+  .btns{display:flex;gap:8px;margin-top:16px}
+  button.primary{background:var(--accent);color:#fff;border:0;border-radius:8px;
+        padding:10px 14px;font-weight:700;font-size:13.5px;cursor:pointer;flex:1}
+  button.primary:hover{background:var(--accent-d)}
+  button.ghost{background:#fff;border:1px solid var(--line);border-radius:8px;
+        padding:10px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
+  .hint{font-size:12px;color:var(--muted)}
+  .exline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:2px 0 10px}
+  .ex{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;
+        cursor:pointer;color:var(--accent-d);font-weight:600}
+  .ex:hover{background:var(--accent-soft)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .chip{background:var(--accent-soft);border:1px solid #cfe6e2;border-radius:999px;padding:5px 11px;font-size:12.5px}
+  .chip b{color:var(--accent-d)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  tbody tr{cursor:pointer} tbody tr:hover{background:#f7fafa} tbody tr.sel{background:var(--accent-soft)}
+  .pri{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;font-weight:700;color:#fff;font-size:11px}
+  .pri1{background:#0f766e}.pri2{background:#8a9aa3}.pri3{background:#b9c3c9}
+  .tablewrap{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 8px;font-size:12.5px;color:#3a4047}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.06)}
+  .trackwrap{overflow-x:auto;padding:6px 2px;border:1px solid var(--line);border-radius:8px;background:#fcfdfe}
+  .track{display:flex}
+  .cell{display:flex;flex-direction:column;align-items:center}
+  .tick{height:14px;font-size:9px;color:#9aa3ab;line-height:14px}
+  .base{width:15px;height:23px;line-height:23px;text-align:center;font-size:13px}
+  .cell.nk .base{border-left:2px solid var(--nick)}
+  .role-bg{background:var(--c-bg)} .role-rtt{background:var(--c-rtt)}
+  .role-pbs{background:var(--c-pbs)} .role-pam{background:var(--c-pam)}
+  .role-variant{background:var(--c-variant)} .role-silent{background:var(--c-silent)}
+  .rttline{margin-top:10px;font-size:13px} .rttline .hl{background:var(--c-silent)}
+  .detailhead{font-weight:700;font-size:15px;color:#0f3d2e;margin:8px 0 8px}
+  .dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 10px}
+  .dbox{background:#f7f9fb;border:1px solid #e3e8ee;border-radius:8px;padding:8px 10px;min-width:0}
+  .dbox.wide{grid-column:1/-1}
+  .dlabel{font-size:10.5px;font-weight:700;color:#6b7480;letter-spacing:.04em;margin-bottom:4px}
+  .dval{font-size:14px;color:#1f2937;word-break:break-all}
+  .muted{color:var(--muted);font-size:13px}
+  .empty{padding:40px 16px;text-align:center;color:var(--muted)}
+  .err{background:#fdeceb;border:1px solid #f6c9c5;color:#9a2820;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+  .warn{background:#fff7e6;border:1px solid #f3dca0;color:#7a5a12;border-radius:8px;padding:10px 12px;font-size:12.5px;margin:10px 0}
+  .sect{margin-top:8px} .sect h3{font-size:14px;margin:18px 0 6px} .right{float:right}
+  a.dl{font-size:12px;color:var(--accent-d);cursor:pointer;text-decoration:underline}
+
+  /* ── frame bar (namespaced .fb-*) ── */
+  .fb-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 12px}
+  .fb-arm{border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:12.5px;cursor:pointer;
+        background:#fff;color:var(--ink);font-weight:600;display:flex;gap:7px;align-items:center}
+  .fb-arm .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+  .fb-arm.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);color:var(--accent-d)}
+  .fb-wrap{overflow-x:auto;overflow-y:visible;border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px 12px 26px}
+  .fb-rows{min-width:max-content;position:relative}
+  .fb-row{display:flex}
+  .fb-cell{width:16px;flex:0 0 16px;position:relative;text-align:center}
+  .fb-row.nt .fb-tick{height:13px;font-size:9px;color:var(--muted);line-height:13px}
+  .fb-b{height:22px;line-height:22px;font-size:13px;border-radius:3px;user-select:none}
+  .fb-b.intron{background:var(--intron);color:#9aa6ad}
+  .fb-b.exon{background:#fff} .fb-b.leftover{background:var(--leftover);color:#a98a3e}
+  .fb-b.edit{background:var(--c-variant);color:#7d1f1a;font-weight:700}
+  .fb-b.oow{opacity:.42;background-image:repeating-linear-gradient(45deg,transparent 0 3px,rgba(90,107,118,.09) 3px 4px)}
+  .fb-arm-on .fb-b{cursor:pointer}
+  .fb-cell.cstart .fb-b{border-left:2px solid var(--codon)}
+  .fb-row.aa{height:21px}
+  .fb-row.aa .fb-cell{font-size:12px;line-height:21px;color:var(--aa-ink);font-weight:700}
+  .fb-cell.codingaa{background:var(--aa)}
+  .fb-cell.cstart.codingaa{border-left:2px solid var(--codon)}
+  .fb-cell.editaa{box-shadow:inset 0 0 0 2px var(--c-variant)}
+  .fb-cell.oowaa{opacity:.42}
+  .fb-exbar{position:absolute;top:13px;height:43px;width:3px;background:var(--accent);z-index:4;border-radius:2px}
+  .fb-exflag{position:absolute;top:-2px;font-size:9px;font-weight:700;white-space:nowrap;
+        background:var(--accent-soft);color:var(--accent-d);border:1px solid #bfe0da;border-radius:4px;padding:1px 4px;z-index:5}
+  .fb-ccaret{position:absolute;top:57px;font-size:11px;color:var(--codon);z-index:4;transform:translateX(-4px)}
+  .fb-cflag{position:absolute;top:68px;font-size:9px;font-weight:700;white-space:nowrap;
+        background:#f4e6c4;color:#7d6321;border:1px solid #ddc98f;border-radius:4px;padding:1px 4px;transform:translateX(-50%);z-index:5}
+  .fb-winline{position:absolute;top:11px;height:47px;border-left:2px dashed #c2ccd2;z-index:3}
+  .fb-winlabel{position:absolute;top:-3px;font-size:9px;font-weight:700;color:#7d8a92;background:#eef1f3;
+        border:1px solid #dde3e7;border-radius:4px;padding:1px 5px;z-index:5;white-space:nowrap}
+  .fb-legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:12px}
+  .fb-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+  .fb-legend i.bar{width:4px;background:var(--accent);border-radius:1px}
+  .fb-legend i.car{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
+        border-bottom:8px solid var(--codon);border-radius:0}
+  .fb-readout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .fb-ro{background:#f7fafa;border:1px solid var(--line);border-radius:8px;padding:9px}
+  .fb-ro.es{border-left:3px solid var(--accent)} .fb-ro.cs{border-left:3px solid var(--codon)}
+  .fb-ro .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .fb-ro .v{font-size:19px;font-weight:700;color:var(--accent-d)} .fb-ro .v.unset{color:#b9c2c8}
+  .fb-pep{margin-top:12px;font-size:12.5px}
+  .fb-pep .seq{font-size:13px;letter-spacing:1px;color:var(--aa-ink)}
+  .aa-chg{background:var(--c-variant);color:#7d1f1a;border-radius:3px;padding:0 2px;font-weight:700}
+  .pepnote{margin-top:7px;font-size:12px;line-height:1.55;border-radius:7px;padding:8px 10px}
+  .pepnote.chg{background:#fdeeec;border:1px solid #f3c9c4;color:#7d2a22}
+  .pepnote.ok{background:#eef6f1;border:1px solid #c4e3cf;color:#2c6b46}
+  .dim{opacity:.45;transition:opacity .15s}
+  pre.fb-call{background:#0f1b1f;color:#d7e7e3;border-radius:8px;padding:11px 12px;font-size:11.5px;overflow-x:auto;margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <h1>Silent Mutation Finder</h1>
+  <p>Paste a sequence and the intended prime edit — find synonymous codon substitutions inside each pegRNA's RTT. Set the reading frame visually; the edit may be intronic with silent markers landing in the adjacent exon.</p>
+</div></header>
+
+<div class="page">
+
+  <!-- 1 · SEQUENCE -->
+  <div class="card">
+    <h2><span class="n">1</span>Sequence</h2>
+    <div class="exline">
+      <span class="hint">Examples:</span>
+      <button class="ex" onclick="loadExample()">in-frame demo</button>
+      <button class="ex" onclick="loadEx('intronic')">USH2A c.8229-2A&gt;G (intronic)</button>
+      <button class="ex" onclick="loadEx('exonic')">USH2A c.2802T&gt;G (exonic)</button>
+    </div>
+    <div id="exNote" class="muted" style="margin:2px 0 10px;line-height:1.5"></div>
+    <div class="seqgrid">
+      <div>
+        <label>WT sequence</label>
+        <textarea id="wt" class="mono" oninput="renderBar()"></textarea>
+      </div>
+      <div id="pairBox">
+        <label>Edited sequence (intended edit)</label>
+        <textarea id="ed" class="mono" oninput="renderBar()"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · READING FRAME -->
+  <div class="card">
+    <h2><span class="n">2</span>Reading frame</h2>
+    <div class="chk">
+      <input type="checkbox" id="exon_mode" onchange="toggleExon()">
+      <label for="exon_mode" style="margin:0">Edit is intronic or spans a splice junction (exon-aware — mark the exon below)</label>
+    </div>
+
+    <!-- simple frame controls -->
+    <div id="simpleCtl">
+      <div class="row3" style="margin-top:10px">
+        <div style="grid-column:span 2">
+          <label>Reading frame</label>
+          <select id="frame" onchange="renderBar()">
+            <option value="start">WT starts at a codon boundary</option>
+            <option value="0">Variant is 1st base of its codon</option>
+            <option value="1">Variant is 2nd base of its codon</option>
+            <option value="2">Variant is 3rd base of its codon</option>
+          </select>
+        </div>
+        <div>
+          <label>Variant codon #</label>
+          <input id="codon_number" placeholder="e.g. 23" oninput="renderBar()">
+        </div>
+      </div>
+    </div>
+
+    <!-- exon-aware controls -->
+    <div id="exonCtl" style="display:none">
+      <div class="fb-tools">
+        <span class="hint">Click a button, then click a base:</span>
+        <button class="fb-arm" id="arm-es" onclick="arm('es')"><span class="sw" style="background:var(--accent)"></span>Exon start</button>
+        <button class="fb-arm" id="arm-ee" onclick="arm('ee')"><span class="sw" style="background:var(--accent)"></span>Exon end</button>
+        <button class="fb-arm" id="arm-cs" onclick="arm('cs')"><span class="sw" style="background:var(--codon)"></span>Codon start (frame)</button>
+        <button class="fb-arm" onclick="clearMarks()">Clear</button>
+        <div style="margin-left:auto;min-width:160px">
+          <label style="margin:0">CDS coord at codon start (c.)</label>
+          <input id="cds_coord" placeholder="e.g. 8230" oninput="CDS=parseInt(this.value)||null;renderBar()" style="padding:5px 8px">
+        </div>
+      </div>
+    </div>
+
+    <div id="fbHost"></div>
+
+    <div class="fb-legend">
+      <span><i style="background:var(--aa)"></i>coding codon + AA</span>
+      <span><i style="background:var(--leftover)"></i>split-codon leftover</span>
+      <span><i style="background:var(--intron)"></i>intron</span>
+      <span><i style="background:var(--c-variant)"></i>edit</span>
+      <span><i class="bar"></i>exon edge</span>
+      <span><i class="car"></i>frame anchor</span>
+      <span class="hint">│ amber = codon boundary · ⁄⁄ dim = outside ±60 bp window</span>
+    </div>
+
+    <div class="fb-readout" id="fbReadout" style="display:none">
+      <div class="fb-ro es"><div class="k">exon_start</div><div class="v unset" id="ro-es">–</div></div>
+      <div class="fb-ro es"><div class="k">exon_end</div><div class="v unset" id="ro-ee">–</div></div>
+      <div class="fb-ro cs"><div class="k">codon_start</div><div class="v unset" id="ro-cs">–</div></div>
+    </div>
+    <div class="fb-pep" id="fbPep"></div>
+    <pre class="fb-call" id="fbCall" style="display:none"></pre>
+  </div>
+
+  <!-- 3 · RUN + RESULT -->
+  <div class="grid">
+    <div class="card">
+      <h2><span class="n">3</span>pegRNA &amp; run</h2>
+      <details open id="pegParams">
+        <summary>pegRNA params</summary>
+        <label>PBS length: <span id="pbsv">13</span></label>
+        <input id="pbs_len" type="range" min="7" max="17" value="13" oninput="pbsv.textContent=this.value">
+        <label>Max RTT length: <span id="rttv">40</span></label>
+        <input id="max_rtt" type="range" min="10" max="40" value="40" oninput="rttv.textContent=this.value">
+      </details>
+
+      <div class="chk" style="margin-top:14px">
+        <input type="checkbox" id="use_dp" onchange="toggleDP()"><label for="use_dp" style="margin:0">Add DeepPrime efficiency ranking</label>
+      </div>
+      <div id="dpBox" style="display:none">
+        <div class="row3" style="margin-top:8px">
+          <div><label>PE system</label>
+            <select id="pe_system">
+              <option>PE2max</option><option>PE2</option><option>PE4max</option>
+              <option>PE2max-e</option><option>PE4max-e</option>
+              <option>NRCH_PE2</option><option>NRCH_PE2max</option><option>NRCH_PE4max</option>
+            </select></div>
+          <div><label>Cell type</label>
+            <select id="cell_type">
+              <option>HEK293T</option><option>A549</option><option>DLD1</option>
+              <option>HCT116</option><option>HeLa</option><option>MDA-MB-231</option><option>NIH3T3</option>
+            </select></div>
+          <div><label>Top-N</label><input id="top_n" type="number" value="20"></div>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" onclick="analyze()">Find candidates</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <div id="result"><div class="empty">Set your input and press <b>Find candidates</b>. An example is preloaded.</div></div>
+    </div>
+  </div>
+
+  <!-- 4 · VERIFY MY pegRNA (additive; existing features untouched) -->
+  <div class="card">
+    <h2><span class="n">4</span>Verify my pegRNA</h2>
+    <div class="muted">Step 1의 WT + edit을 기준으로, 손으로 설계한 pegRNA를
+      <b>spacer</b> + <b>3' extension (RTT+PBS, 5'&rarr;3')</b> + <b>PBS length</b>로 붙여넣으면,
+      edit 설치 여부와 RTT 안의 silent 마커를 디코드해서 보여줌.</div>
+    <div class="exline">
+      <span class="hint">Example:</span>
+      <button class="ex" onclick="verifyDemo()">in-frame demo</button>
+      <button class="ex" onclick="verifyDemoUSH2A()">USH2A c.2802T&gt;G</button>
+    </div>
+    <label>Spacer (protospacer, 5'&rarr;3')</label>
+    <input id="v_spacer" class="mono" placeholder="~20 nt protospacer">
+    <label>3' extension (RTT + PBS, 5'&rarr;3')</label>
+    <input id="v_ext" class="mono" placeholder="RTT immediately followed by PBS">
+    <label>PBS length (nt)</label>
+    <input id="v_pbs" type="number" value="13" min="1" max="20" style="width:110px">
+    <div class="btns"><button class="primary" onclick="verifyRun()">Verify</button></div>
+    <div id="vresult"><div class="empty">Fill in step 1, paste your pegRNA, then press <b>Verify</b>.</div></div>
+  </div>
+  <style>
+    .vbadge{display:inline-block;font-weight:700;padding:6px 14px;border-radius:8px;margin:6px 0 10px;font-size:14px}
+    .vbadge.good{background:#e7f6ec;color:#137a3a;border:1px solid #b6e3c4}
+    .vbadge.bad{background:#fdeaea;color:#b32020;border:1px solid #f3bcbc}
+    #vresult .ok{color:#137a3a;font-weight:700}
+    #vresult .no{color:#b32020;font-weight:700}
+    .guidebox{display:none}
+  </style>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const CW=16;
+const DEMO_WT="GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTGAAGGGTTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCAT";
+const DEMO_ED="GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTTAAGGGTTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCAT";
+
+const CODON={TTT:'F',TTC:'F',TTA:'L',TTG:'L',CTT:'L',CTC:'L',CTA:'L',CTG:'L',
+ATT:'I',ATC:'I',ATA:'I',ATG:'M',GTT:'V',GTC:'V',GTA:'V',GTG:'V',
+TCT:'S',TCC:'S',TCA:'S',TCG:'S',CCT:'P',CCC:'P',CCA:'P',CCG:'P',
+ACT:'T',ACC:'T',ACA:'T',ACG:'T',GCT:'A',GCC:'A',GCA:'A',GCG:'A',
+TAT:'Y',TAC:'Y',TAA:'*',TAG:'*',CAT:'H',CAC:'H',CAA:'Q',CAG:'Q',
+AAT:'N',AAC:'N',AAA:'K',AAG:'K',GAT:'D',GAC:'D',GAA:'E',GAG:'E',
+TGT:'C',TGC:'C',TGA:'*',TGG:'W',CGT:'R',CGC:'R',CGA:'R',CGG:'R',
+AGT:'S',AGC:'S',AGA:'R',AGG:'R',GGT:'G',GGC:'G',GGA:'G',GGG:'G'};
+const aaOf=c=>(c&&c.length===3)?(CODON[c]||'?'):'';
+
+const REF={
+  intronic:{ed:"AACAGCCTGAGTTTTGGTAATCTCAATATGAGTTGAGATAATCCTGATGTTCCTGCTTGTCTTTTGCTTTAGATATGAGCTTCTGAGACGTAAAATCCAGCAGCCACTTGCATCAAATCCCCCAGAAGATTTAAATCGGTG",
+            editAt:70,wtAllele:"G",es:72,ee:141,cs:73,cds:8230},
+  exonic:{ed:"CCATTTGTGACCCAATCAGTGGCCAGTGCCTGTGTGTGCCTAATCGTCAAGGAAGAAGGTGTAATCAGTGTCAACCAGGTAAGAAAGAAATGTATTACATTTTCAGTGCACAATGACATTCCTTTTGTTAACTTAGGTAAC",
+            editAt:70,wtAllele:"G",es:0,ee:78,cs:68,cds:2800},
+};
+
+let MODE="pair", CANDS=[];
+let EXON=false, exonStart=null, exonEnd=null, codonStart=null, CDS=null, armed=null;
+
+const clean=s=>(s||'').toUpperCase().replace(/[^ACGT]/g,'');
+
+function toggleExon(){
+  EXON=$('exon_mode').checked;
+  $('simpleCtl').style.display = EXON?'none':'block';
+  $('exonCtl').style.display   = EXON?'block':'none';
+  $('fbReadout').style.display = EXON?'grid':'none';
+  $('fbCall').style.display    = EXON?'block':'none';
+  armed=null; syncArm(); renderBar();
+}
+function toggleDP(){ var on=$('use_dp').checked; $('dpBox').style.display=on?'block':'none'; $('pbs_len').disabled=on; $('max_rtt').disabled=on; var pp=$('pegParams'); if(pp) pp.classList.toggle('dim',on); }
+
+function arm(w){ if(!EXON)return; armed=(armed===w?null:w); syncArm(); }
+function syncArm(){
+  for(const w of['es','ee','cs']) $('arm-'+w).classList.toggle('on',armed===w);
+  $('fbHost').firstElementChild && $('fbHost').firstElementChild.classList.toggle('fb-arm-on', armed!=null);
+}
+function clearMarks(){ exonStart=exonEnd=codonStart=null; renderBar(); }
+function placeMarker(i){ if(!EXON||!armed)return;
+  if(armed==='es')exonStart=i; else if(armed==='ee')exonEnd=i; else codonStart=i; renderBar(); }
+
+function loadExample(){ MODE='pair'; setModeSeg('pair'); EXON=false; $('exon_mode').checked=false; toggleExon();
+  $('wt').value=DEMO_WT; $('ed').value=DEMO_ED; $('exNote').innerHTML=''; renderBar(); }
+function setModeSeg(m){ MODE=m; var pb=$('pairBox'); if(pb) pb.style.display='block'; }
+const EXNOTE={
+  exonic:'<b>WT</b> = 변이형 (코돈 TGG · Trp), <b>Edited</b> = 정상형 (코돈 TGT · Cys)',
+  intronic:'<b>WT</b> = 변이형 (G), <b>Edited</b> = 정상형 (A)'
+};
+function loadEx(k){ const e=REF[k]; const ed=e.ed, wt=ed.slice(0,e.editAt)+e.wtAllele+ed.slice(e.editAt+1);
+  setModeSeg('pair'); $('wt').value=wt; $('ed').value=ed;
+  $('exon_mode').checked=true; EXON=true; toggleExon();
+  exonStart=e.es; exonEnd=e.ee; codonStart=e.cs; CDS=e.cds; $('cds_coord').value=e.cds;
+  $('exNote').innerHTML=EXNOTE[k]||'';
+  renderBar(); }
+
+function diffEdit(wt,ed){ if(!wt||!ed||wt===ed)return null; const n=Math.min(wt.length,ed.length); let i=0,j=0;
+  while(i<n&&wt[i]===ed[i])i++; while(j<n-i&&wt[wt.length-1-j]===ed[ed.length-1-j])j++;
+  const ref=wt.slice(i,wt.length-j),alt=ed.slice(i,ed.length-j);
+  if(ref.length>3||alt.length>3)return null; return{pos:i,ref,alt}; }
+
+function getEdit(wt){
+  if(MODE==='spec'){
+    const pos=parseInt($('pos').value); const ref=clean($('ref').value), alt=clean($('alt').value);
+    if(isNaN(pos)||pos<0||pos>wt.length)return null;
+    if(ref && wt.slice(pos,pos+ref.length)!==ref) return {pos,ref,alt,mismatch:true};
+    return {pos,ref,alt};
+  }
+  return diffEdit(wt, clean($('ed').value));
+}
+function editedSeq(wt,edit){
+  if(MODE==='spec') return wt.slice(0,edit.pos)+edit.alt+wt.slice(edit.pos+edit.ref.length);
+  return clean($('ed').value);
+}
+
+function renderBar(){
+  const wt=clean($('wt').value); const L=wt.length; const host=$('fbHost');
+  if(!L){ host.innerHTML='<div class="hint" style="padding:10px">Enter a WT sequence to set the reading frame.</div>';
+          $('fbPep').innerHTML=''; $('fbCall').textContent=''; setRO(null,null,null); return; }
+  const edit=getEdit(wt);
+  const refLen=edit?Math.max(edit.ref.length,1):1;
+  const winLo=edit?edit.pos-60:0, winHi=edit?edit.pos+refLen+60:L;
+
+  // codon model (exon-aware vs contiguous)
+  const starts=[], coding=new Set(); let numOf=()=>null, boundary=null;
+  if(EXON){
+    if(exonStart!=null&&exonEnd!=null&&codonStart!=null){
+      const eLo=Math.max(exonStart,winLo,0), eHi=Math.min(exonEnd,winHi,L);
+      const frame=((codonStart%3)+3)%3;
+      let first=eLo+((((frame-eLo)%3)+3)%3);
+      for(let s=first;s+3<=eHi;s+=3){starts.push(s);coding.add(s);coding.add(s+1);coding.add(s+2);}
+      const base = CDS!=null ? (((CDS-1)/3)|0)+1 : null;
+      numOf = s => base!=null ? base+(s-codonStart)/3 : null;
+    }
+  } else if(edit){
+    const phase = $('frame').value==='start' ? ((edit.pos%3)+3)%3 : (+$('frame').value);
+    boundary = edit.pos-phase;
+    for(let s=((boundary%3)+3)%3;s+3<=L;s+=3) starts.push(s);
+    for(let i=0;i<L;i++) coding.add(i);
+    const vn=parseInt($('codon_number').value);
+    numOf = s => !isNaN(vn) ? vn+(s-boundary)/3 : null;
+  }
+  const csSet=new Set(starts);
+  const inEdit=i=>edit&&i>=edit.pos&&i<edit.pos+refLen;
+  const role=i=>{ if(inEdit(i))return'edit'; if(coding.has(i))return'exon';
+    if(EXON&&exonStart!=null&&exonEnd!=null&&i>=exonStart&&i<exonEnd)return'leftover'; return'intron'; };
+
+  let nt='',aa='';
+  for(let i=0;i<L;i++){
+    const tk=(i%10===0)?i:''; const oow=(i<winLo||i>=winHi)?' oow':''; const cs=csSet.has(i)?' cstart':'';
+    nt+=`<div class="fb-cell${cs}"><div class="fb-tick">${tk}</div>`
+       +`<div class="fb-b ${role(i)}${oow}" onclick="placeMarker(${i})">${wt[i]}</div></div>`;
+    let letter='', cls='fb-cell';
+    if(coding.has(i)) cls+=' codingaa'; if(csSet.has(i)) cls+=' cstart'; if(oow) cls+=' oowaa';
+    if(csSet.has(i-1)){ const s=i-1; letter=aaOf(wt.slice(s,s+3));
+      if(edit&&edit.pos>=s&&edit.pos<s+3) cls+=' editaa'; }
+    aa+=`<div class="${cls}" title="${csSet.has(i-1)?('codon '+(numOf(i-1)??'?')):''}">${letter}</div>`;
+  }
+
+  let ov=''; const x=i=>i*CW;
+  if(edit){ const wLo=Math.max(0,winLo), wHi=Math.min(L,winHi);
+    if(wLo>0){ov+=`<div class="fb-winline" style="left:${x(wLo)-1}px"></div>`
+       +`<div class="fb-winlabel" style="left:2px">◂ outside ±60 bp window</div>`;}
+    if(wHi<L){ov+=`<div class="fb-winline" style="left:${x(wHi)-1}px"></div>`
+       +`<div class="fb-winlabel" style="left:${x(wHi)+3}px">outside ±60 bp window ▸</div>`;}
+  }
+  if(EXON){
+    if(exonStart!=null){ov+=`<div class="fb-exbar" style="left:${x(exonStart)-1}px"></div>`
+       +`<div class="fb-exflag" style="left:${x(exonStart)}px">exon ▸</div>`;}
+    if(exonEnd!=null){ov+=`<div class="fb-exbar" style="left:${x(exonEnd)-1}px"></div>`
+       +`<div class="fb-exflag" style="left:${x(exonEnd)-44}px">◂ exon</div>`;}
+    if(codonStart!=null){const cx=x(codonStart);
+       ov+=`<div class="fb-ccaret" style="left:${cx}px">▲</div><div class="fb-cflag" style="left:${cx-3}px">frame</div>`;}
+  }
+
+  host.innerHTML=`<div class="fb-wrap${armed!=null?' fb-arm-on':''}"><div class="fb-rows">`
+    +`<div class="fb-row nt">${nt}</div><div class="fb-row aa">${aa}</div>${ov}</div></div>`;
+
+  setRO(exonStart,exonEnd,codonStart);
+
+  // peptide compare (WT vs Edited)
+  let pep='';
+  if(edit&&edit.mismatch){ pep='<span style="color:var(--nick)">Ref does not match WT at that index.</span>'; }
+  else if(starts.length){
+    const ed=editedSeq(wt,edit); const canEd=edit&&edit.ref.length===edit.alt.length&&ed.length===wt.length;
+    let diff=false; const changes=[], wtC=[], edC=[];
+    for(const s of starts){
+      const w=aaOf(wt.slice(s,s+3));
+      if(canEd){
+        const e=aaOf(ed.slice(s,s+3));
+        if(e!==w){ diff=true; const n=numOf(s);
+          changes.push((n!=null?'codon '+n+': ':'')+w+'→'+e);
+          wtC.push('<span class="aa-chg">'+w+'</span>'); edC.push('<span class="aa-chg">'+e+'</span>'); }
+        else { wtC.push(w); edC.push(e); }
+      } else { wtC.push(w); }
+    }
+    const wtP=wtC.join(''), edP=edC.join('');
+    const editIntronic=edit&&!coding.has(edit.pos);
+    pep=`<div>${starts.length} coding codon(s) in window`+(editIntronic?' · <b>edit is intronic</b> (no protein change)':'')+`</div>`
+      +`<div style="margin-top:4px">WT&nbsp;&nbsp;&nbsp;: <span class="seq">${wtP}</span></div>`;
+    if(canEd){ pep+=`<div>Edited: <span class="seq">${edP}</span></div>`
+      +(diff ? '' : `<div class="pepnote ok">no amino-acid change in this window</div>`); }
+  }
+  $('fbPep').innerHTML=pep;
+
+  // backend call preview (exon mode)
+  $('fbCall').textContent = (EXON&&edit&&exonStart!=null&&exonEnd!=null&&codonStart!=null)
+    ? `v = build_variant_from_pair(\n    wt, ed,\n    exon_start=${exonStart}, exon_end=${exonEnd}, codon_start=${codonStart}`
+      +(CDS!=null?`, cds_coord_at_codon_start=${CDS}`:'')+`,\n)` : '';
+}
+function setRO(es,ee,cs){ const set=(id,v)=>{const el=$(id); if(!el)return; el.textContent=(v==null?'–':v); el.classList.toggle('unset',v==null);};
+  set('ro-es',es); set('ro-ee',ee); set('ro-cs',cs); }
+
+// ── analyze ──────────────────────────────────────────────────────────────
+async function analyze(){
+  const body={
+    mode:MODE, wt:$('wt').value, ed:$('ed').value,
+    pos:($('pos')?+$('pos').value:0), ref:($('ref')?$('ref').value:''), alt:($('alt')?$('alt').value:''),
+    frame:$('frame').value, codon_number:$('codon_number').value,
+    pbs_len:+$('pbs_len').value, max_rtt:+$('max_rtt').value,
+    use_dp:$('use_dp').checked,
+    dp:{pe_system:$('pe_system').value, cell_type:$('cell_type').value,
+        top_n:+$('top_n').value, path:''}
+  };
+  if(EXON && exonStart!=null && exonEnd!=null && codonStart!=null){
+    body.exon_start=exonStart; body.exon_end=exonEnd; body.codon_start=codonStart;
+    body.cds_coord=(CDS!=null?CDS:'');
+  }
+  $('result').innerHTML='<div class="empty">Analyzing…</div>';
+  let data;
+  try{
+    const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    data=await r.json();
+  }catch(e){ $('result').innerHTML='<div class="err">Request failed: '+e+'</div>'; return; }
+  if(!data.ok){ $('result').innerHTML='<div class="err">'+esc(data.error)+'</div>'; return; }
+  render(data);
+}
+
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+function render(d){
+  CANDS=d.candidates; const v=d.variant;
+  let h='<div class="chips">'
+    +chip('Variant',`${v.ref}\u2192${v.alt}`)+chip('Type',v.type)
+    +chip('Variant codon',`${v.codon} (${v.aa})`)
+    +chip('Protein',v.protein||'\u2014')+chip('Candidates',CANDS.length)+'</div>';
+  if(d.deepprime){ h+=renderDP(d.deepprime); }
+  const dpOn = d.deepprime && d.deepprime.available && d.deepprime.pegrnas && d.deepprime.pegrnas.length;
+  if(CANDS.length){
+    const head = dpOn
+      ? '<details class="sect"><summary>\uC804\uCCB4 \uAC00\uB2A5 \uBAA9\uB85D (standalone, \uCC38\uACE0\uC6A9 \u00B7 '+CANDS.length+'\uAC1C)</summary>'
+      : '<div class="sect"><h3>Candidates <a class="dl right" onclick="dlCands()">CSV</a></h3>'
+        +'<div class="muted">priority 1 = PAM-disrupting \u00B7 2 = LHA \u00B7 3 = RHA \u2014 click a row to visualize</div>';
+    let tb='<div class="tablewrap"><table><thead><tr>'
+      +'<th>#</th><th>PAM</th><th>locale</th><th>pri</th><th>codon</th><th>silent</th><th>pos</th><th>RTT</th>'
+      +'</tr></thead><tbody>';
+    CANDS.forEach((c,i)=>{
+      tb+=`<tr id="r${i}" onclick="sel(${i})"><td>${c.rank}</td><td class="mono">${c.pam}</td>`
+        +`<td>${c.locale}</td><td><span class="pri pri${c.priority}">${c.priority}</span></td>`
+        +`<td class="mono">${c.codon} (${c.aa})</td><td class="mono">${c.silent}</td>`
+        +`<td class="mono">${c.silent_pos}</td><td class="mono">${c.rtt}</td></tr>`;
+    });
+    tb+='</tbody></table></div><div id="viz"></div>';
+    h += head + tb + (dpOn ? '</details>' : '</div>');
+  } else if(!d.deepprime){
+    h+='<div class="empty">No silent candidates. Try a longer WT or a higher Max RTT.</div>';
+  }
+  $('result').innerHTML=h;
+  if(CANDS.length) sel(0);
+}
+
+function chip(k,val){return `<span class="chip">${k}: <b>${esc(val)}</b></span>`;}
+function sel(i){ CANDS.forEach((_,j)=>{const r=$('r'+j); if(r) r.classList.toggle('sel',j===i);}); $('viz').innerHTML=track(CANDS[i]); }
+
+function legend(){
+  const names={rtt:'RTT',pbs:'PBS',pam:'PAM',variant:'Variant',silent:'Silent'};
+  let leg='<div class="legend">';
+  for(const k in names) leg+=`<span><i class="role-${k}"></i>${names[k]}</span>`;
+  return leg+'<span class="muted">│ red bar = nick</span></div>';
+}
+function trackCells(seq_wt, roles, nick){
+  let cells='';
+  for(let i=0;i<seq_wt.length;i++){
+    const tk=(i%10===0)?i:''; const nk=(i===nick)?' nk':'';
+    cells+=`<div class="cell${nk}"><div class="tick">${tk}</div>`
+         +`<div class="base mono role-${roles[i]}">${seq_wt[i]}</div></div>`;
+  }
+  return cells;
+}
+function track(c){
+  let tail;
+  if(c.ext_rc!==undefined || c.spacer!==undefined){
+    tail = (c.spacer?`<div class="rttline mono"><b>Spacer (guide, 5'\u21923'):</b> ${esc(c.spacer)}</div>`:'')
+         + (c.ext_rc?`<div class="rttline mono"><b>pegRNA 3' ext (RTT+PBS, 5'\u21923'):</b> ${esc(c.ext_rc)}</div>`:'');
+  } else {
+    const off=new Set(c.sil_off); let rtt='';
+    for(let j=0;j<c.rtt.length;j++) rtt+=`<span class="${off.has(j)?'hl':''}">${c.rtt[j]}</span>`;
+    tail = `<div class="rttline mono"><b>RTT (PAM-strand 5'\u21923'):</b> ${rtt}</div>`;
+  }
+  return legend()+`<div class="trackwrap"><div class="track">${trackCells(c.seq_wt,c.roles,c.nick)}</div></div>`+tail;
+}
+// all silent positions of one pegRNA overlaid on a single sequence
+function trackAll(silents){
+  if(!silents||!silents.length) return '';
+  const base=silents[0]; const roles=base.roles.slice();
+  silents.forEach(s=>{ String(s.silent_pos).split(',').forEach(x=>{
+    const k=parseInt(x,10); if(!isNaN(k)&&k>=0&&k<roles.length) roles[k]='silent'; }); });
+  const tail=(base.spacer?`<div class="rttline mono"><b>Spacer (guide, 5'\u21923'):</b> ${esc(base.spacer)}</div>`:'');
+  return legend()+`<div class="trackwrap"><div class="track">${trackCells(base.seq_wt,roles,base.nick)}</div></div>`+tail;
+}
+
+let DP_PEGS=[];
+function renderDP(dp){
+  let h='<div class="sect"><h3>DeepPrime ranking</h3>'
+    +'<div class="muted">효율순 pegRNA — 행을 누르면 그 pegRNA의 silent 후보가 펼쳐지고, 후보를 누르면 아래에 시각화</div>';
+  if(!dp.available){ return h+'<div class="warn">'+esc(dp.message)+'</div></div>'; }
+  if(!dp.pegrnas||!dp.pegrnas.length){ return h+'<div class="warn">'+esc(dp.message||'No pegRNAs.')+'</div></div>'; }
+  DP_PEGS=dp.pegrnas;
+  h+='<a class="dl right" onclick="dlDP()">CSV</a>'
+    +'<div class="tablewrap"><table><thead><tr>'
+    +'<th>rank</th><th>efficiency</th><th>strand</th><th>PBS</th><th>RTT</th>'
+    +'<th>silent</th><th>#opts</th><th>best codon</th></tr></thead><tbody>';
+  DP_PEGS.forEach((p,i)=>{
+    h+=`<tr id="pg${i}" onclick="selectPeg(${i})"><td>${p.rank}</td>`
+      +`<td><b>${p.efficiency}</b></td><td>${p.strand}</td><td>${p.pbs_len}</td><td>${p.rtt_len}</td>`
+      +`<td>${p.silent_marker==='available'?'\u2713':'\u2014'}</td><td>${p.n_silent}</td>`
+      +`<td class="mono">${esc(p.best_codon)}${p.best_locale?' ('+p.best_locale+')':''}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  h+='<div id="pegDetail" class="muted" style="margin-top:10px">\u2191 pegRNA \uD589\uC744 \uD074\uB9AD\uD558\uBA74 silent \uD6C4\uBCF4\uAC00 \uD3BC\uCCD0\uC838\uC694.</div>';
+  h+='<div id="dpviz"></div></div>';
+  return h;
+}
+function dbox(label,val,mono,extra){
+  return `<div class="dbox ${extra||''}"><div class="dlabel">${label}</div>`
+    +`<div class="dval ${mono?'mono':''}">${esc(String(val))}</div></div>`;
+}
+function pegSeqs(s,note){
+  if(!s) return '<div class="muted">'+(note||'')+'</div>';
+  return '<div class="dgrid">'
+    +dbox("SPACER (5'\u21923')",s.spacer||'\u2014',true,'wide')
+    +dbox("pegRNA 3' EXT (RTT+PBS, 5'\u21923')",s.ext_rc||'\u2014',true,'wide')
+    +dbox("PBS-RTT (PAM strand 5'\u21923')",s.pbsrtt||'\u2014',true,'wide')
+    +dbox('WT WINDOW',s.seq_wt||'\u2014',true,'wide')
+    +dbox('EDITED WINDOW (edit + silent)',s.edseq||'\u2014',true,'wide')
+    +'</div>'+(note?'<div class="muted" style="margin-top:-4px;margin-bottom:8px">'+note+'</div>':'');
+}
+function selectPeg(i){
+  DP_PEGS.forEach((_,j)=>{const r=$('pg'+j); if(r) r.classList.toggle('sel',j===i);});
+  const p=DP_PEGS[i];
+  if(!p.silents||!p.silents.length){
+    $('pegDetail').innerHTML='<div class="warn">\uC774 pegRNA\uC5D4 \uB4E4\uC5B4\uAC08 silent \uB9C8\uCEE4\uAC00 \uC5C6\uC5B4\uC694.</div>';
+    $('dpviz').innerHTML=''; return;
+  }
+  let h='<div class="detailhead">Selected pegRNA #'+p.rank+'</div>'
+    +'<div class="dgrid">'
+    +dbox('GUIDE SEQUENCE',p.spacer||'\u2014',true,'wide')
+    +dbox('STRAND',p.strand)+dbox('PBS LENGTH',p.pbs_len)
+    +dbox('RTT LENGTH',p.rtt_len)+dbox('DEEPPRIME SCORE',p.efficiency)
+    +'</div>'
+    +'<div id="pegSeqs"></div>'
+    +'<div style="margin:4px 0 4px;font-weight:600">silent \uD6C4\uBCF4 ('+p.silents.length+') \u2014 '
+    +'<a class="dl" onclick="showAll('+i+')">전체 보기</a> \u00B7 행을 누르면 그 silent 하나만 시각화</div>'
+    +'<div class="tablewrap" style="max-height:200px"><table><thead><tr>'
+    +'<th>#</th><th>locale</th><th>pri</th><th>codon</th><th>silent</th><th>pos</th></tr></thead><tbody>';
+  p.silents.forEach((s,j)=>{
+    h+=`<tr id="ds${i}_${j}" onclick="selectDpSilent(${i},${j})"><td>${j+1}</td>`
+      +`<td>${s.locale}</td><td><span class="pri pri${s.priority}">${s.priority}</span></td>`
+      +`<td class="mono">${s.codon} (${s.aa})</td><td class="mono">${s.silent}</td><td class="mono">${s.silent_pos}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  $('pegDetail').innerHTML=h; showAll(i);
+}
+function showAll(i){
+  const p=DP_PEGS[i];
+  p.silents.forEach((_,k)=>{const r=$(`ds${i}_${k}`); if(r) r.classList.remove('sel');});
+  const ps=$('pegSeqs'); if(ps) ps.innerHTML=pegSeqs(p.silents[0],'서열은 best silent(1번) 기준 — 아래 표에서 특정 후보 클릭 시 해당 후보의 silent (단일) 확인 가능');
+  $('dpviz').innerHTML=trackAll(p.silents);
+}
+function selectDpSilent(i,j){
+  const p=DP_PEGS[i];
+  p.silents.forEach((_,k)=>{const r=$(`ds${i}_${k}`); if(r) r.classList.toggle('sel',k===j);});
+  const ps=$('pegSeqs'); if(ps) ps.innerHTML=pegSeqs(p.silents[j]);
+  $('dpviz').innerHTML=track(p.silents[j]);
+}
+
+function toCSV(rows){ if(!rows.length) return '';
+  const cols=Object.keys(rows[0]); const e=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  return cols.join(',')+'\n'+rows.map(r=>cols.map(c=>e(r[c])).join(',')).join('\n'); }
+function dl(csv,name){ const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=name; a.click(); }
+function dlCands(){ dl(toCSV(CANDS.map(c=>({rank:c.rank,pam:c.pam,locale:c.locale,priority:c.priority,
+  codon:c.codon,aa:c.aa,silent:c.silent,silent_pos:c.silent_pos,
+  guide:c.spacer,pbs_len:c.pbs_len,rtt_len:c.rtt_len,pbs_seq:c.pbs_seq,
+  rtt_edited:(c.pbsrtt||'').slice(c.pbs_len),pbsrtt:c.pbsrtt,pegRNA_3ext_RC:c.ext_rc,
+  wtseq:c.seq_wt,edseq:c.edseq}))),'silent_candidates.csv'); }
+function dlDP(){ dl(toCSV(DP_PEGS.map(p=>{
+  const b=(p.silents&&p.silents[0])||{};
+  return {rank:p.rank,efficiency:p.efficiency,strand:p.strand,
+    guide:p.spacer,pbs_len:p.pbs_len,rtt_len:p.rtt_len,
+    pbs_seq:b.pbs_seq||'',rtt_edited:(b.pbsrtt||'').slice(b.pbs_len||0),
+    pbsrtt:b.pbsrtt||'',pegRNA_3ext_RC:b.ext_rc||'',
+    n_silent_opts:p.n_silent,best_silent:p.best_codon,best_silent_pos:b.silent_pos||'',
+    best_silent_locale:p.best_locale,wtseq:b.seq_wt||'',edseq:b.edseq||''};
+})),'deepprime_designs.csv'); }
+
+loadExample();
+function verifyDemoUSH2A(){
+  loadEx('exonic');                                // step 1: USH2A c.2802T>G (exonic, exon-aware)
+  $('v_spacer').value='CTGTGTGTGCCTAATCGTCA';
+  $('v_ext').value='TTTCTTACCTGGTTGACACTGATTACACCTTCTTCCCTGACGATTAGGCACAC';
+  $('v_pbs').value=13;
+  verifyRun();
+}
+function verifyDemo(){
+  loadExample();                                   // step 1: in-frame demo (pair mode, exon off)
+  $('frame').value='start'; $('codon_number').value=''; renderBar();
+  $('v_spacer').value='CACGTCAGCACGAAACTTGT';
+  $('v_ext').value='CACTTACTTAACCCTTAAAGCGATTCACACTGGGCTAGCAAGTTTCGTGCTGA';
+  $('v_pbs').value=13;
+  verifyRun();
+}
+async function verifyRun(){
+  const body={
+    mode:MODE, wt:$('wt').value, ed:$('ed').value,
+    pos:($('pos')?+$('pos').value:0), ref:($('ref')?$('ref').value:''), alt:($('alt')?$('alt').value:''),
+    frame:$('frame').value, codon_number:$('codon_number').value,
+    spacer:$('v_spacer').value, extension:$('v_ext').value, pbs_len_v:+$('v_pbs').value
+  };
+  if(EXON && exonStart!=null && exonEnd!=null && codonStart!=null){
+    body.exon_start=exonStart; body.exon_end=exonEnd; body.codon_start=codonStart;
+    body.cds_coord=(CDS!=null?CDS:'');
+  }
+  $('vresult').innerHTML='<div class="empty">Verifying\u2026</div>';
+  let data;
+  try{
+    const r=await fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    data=await r.json();
+  }catch(e){ $('vresult').innerHTML='<div class="err">Request failed: '+e+'</div>'; return; }
+  renderVerify(data);
+}
+
+function renderVerify(d){
+  if(!d.ok){ $('vresult').innerHTML='<div class="err">'+esc(d.error||'Verify failed')+'</div>'; return; }
+  let h='';
+  // \ub2e8 \ud558\ub098\uc758 \ud544\uc218 \ud1b5\uacfc: RTT\uac00 \uc758\ub3c4\ud55c edit\uc744 \uc2e4\uc81c\ub85c \uc124\uce58\ud558\ub294\uac00
+  if(!d.edit_ok){
+    h+='<div class="vbadge bad">\u2717 \uc774 pegRNA\ub294 \uc758\ub3c4\ud55c edit\uc744 \uc124\uce58\ud558\uc9c0 \uc54a\uc74c</div>'
+      +'<div class="err">RTT\uac00 variant \uc704\uce58\uc5d0 edit\uc744 \ub123\uc9c0 \ubabb\ud568 \u2014 \uc544\ub798 silent\uc744 \ubcf4\uae30 \uc804\uc5d0 \ubc29\ud5a5/\uc704\uce58\ubd80\ud130 \ud655\uc778 \ud544\uc694.</div>';
+  } else {
+    h+='<div class="vbadge good">\u2713 edit installed</div>';
+  }
+  h+='<div class="chips">'+chip('strand',d.strand)+chip('PBS',d.pbs_len+' nt')
+    +chip('RTT',d.rtt_len+' nt')+chip('silent markers',d.n_user_silents)+'</div>';
+
+  if(d.n_user_silents===0){
+    h+='<div class="empty">RTT\uc5d0 silent \ub9c8\ucee4 \uc5c6\uc74c (edit \uc678\uc5d0\ub294 WT\uc640 \ub3d9\uc77c).</div>';
+  } else {
+    h+='<div class="sect"><h3>Silent markers in your RTT</h3>'
+      +'<div class="muted">matches tool = 위치·염기까지 툴이 추천한 silent와 동일 · class = 그 자리의 우선순위(1 PAM-disrupting · 2 LHA · 3 RHA)</div>'
+      +'<div class="tablewrap"><table><thead><tr>'
+      +'<th>pos</th><th>alt</th><th>codon</th><th>aa</th><th>matches tool</th><th>class</th><th>note</th>'
+      +'</tr></thead><tbody>';
+    d.silents.forEach(s=>{
+      const matched = s.priority!=null;
+      h+='<tr><td class="mono">'+s.pos+'</td><td class="mono">'+(s.alt||'\u2014')+'</td>'
+        +'<td class="mono">'+(s.codon||'\u2014')+'</td><td class="mono">'+(s.aa||'\u2014')+'</td>'
+        +'<td>'+(s.valid?'<span class="ok">\u2713</span>':'<span class="no">\u2717</span>')+'</td>'
+        +'<td>'+(matched?('<span class="pri pri'+s.priority+'">'+s.priority+'</span> '+(s.locale||''))
+                       :'<span class="muted">\u2014</span>')+'</td>'
+        +'<td class="muted">'+esc(s.reason||'')+'</td></tr>';
+    });
+    h+='</tbody></table></div></div>';
+  }
+  h+='<div id="vviz"></div>';
+  $('vresult').innerHTML=h;
+  $('vviz').innerHTML=track(d);   // reuse colored track (d has seq_wt/roles/nick/sil_off/rtt)
+}
+</script>
+</body>
+</html>
