@@ -6,8 +6,8 @@ Given a Variant (target + 121 bp window) and a user's pegRNA written as
 this decodes it to PAM / nick / PBS / RTT, extracts the silent substitutions
 the user placed in the RTT, and validates each against the tool's own
 synonymous-candidate set (find_silent_candidates) — the same ground truth the
-main pipeline uses. No new biology: it reuses the pam_finder / types
-conventions and the existing silent finder.
+main pipeline uses. It reuses the pam_finder / types conventions
+and the existing silent finder.
 
 Why PBS length is required: from a concatenated extension alone the RTT|PBS
 boundary is ambiguous (every WT-matching suffix length is consistent, and a
@@ -27,7 +27,6 @@ Orientation (see pam_finder / types):
   PBS+RTT directly, and report which orientation matched ("orient").
 
 Scope: substitution edits (ref_len == alt_len). Used by POST /api/verify.
-Existing endpoints/behaviour are untouched.
 """
 
 from __future__ import annotations
