@@ -51,7 +51,7 @@ from silent_mutation.core.codon_utils import load_codon_table
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Lightweight CodonInfo (attribute-compatible with io.codon_lookup.CodonInfo)
+# Lightweight CodonInfo
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
