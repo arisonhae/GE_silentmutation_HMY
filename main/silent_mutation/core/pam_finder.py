@@ -57,8 +57,6 @@ from silent_mutation.core.types import (
 )
 from silent_mutation.io.genome_loader import reverse_complement
 
-
-# Defaults — see SynDesign main_syn.py
 DEFAULT_PBS_LEN = 13
 DEFAULT_MAX_RTT_LEN = 40
 
@@ -111,7 +109,6 @@ def _scan_ngg(
 
     for m in _NGG_RE.finditer(seq):
         pam_pos = m.start()
-        pam_seq = m.group(1)  # the captured NGG triplet
 
         # nick is 3bp upstream of N (5' side on CDS strand)
         nick_pos = pam_pos - 3
@@ -176,7 +173,6 @@ def _scan_ccn(
 
     for m in _CCN_RE.finditer(seq):
         pam_pos = m.start()       # first C of CCN
-        pam_seq = m.group(1)      # CCN triplet on CDS strand
 
         # nick is 6bp downstream of pam_pos on CDS strand index axis
         # (corresponds to "3bp 5' of PAM on PAM strand", same biology
