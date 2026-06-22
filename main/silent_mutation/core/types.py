@@ -23,12 +23,12 @@ Variant types (by ref_len, alt_len):
     Deletion:     ref_len in {1,2,3},  alt_len == 0
 """
 
-from dataclasses import dataclass
-from typing import Literal
 from dataclasses import dataclass, field
+from typing import Literal
 
 # SynDesign / DeepPrime standard. Do NOT change without coordinating with
 # downstream tools (DeepPrime input format depends on this).
+
 FLANK = 60
 VAR_IDX = 60
 
