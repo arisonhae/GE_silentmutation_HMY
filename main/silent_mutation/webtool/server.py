@@ -1,18 +1,18 @@
 """
-silent_mutation.webtool.server — Flask backend (replaces the Streamlit app).
+silent_mutation.webtool.server — Flask backend.
 
-Serves a hand-built HTML front-end (index.html) and one JSON endpoint that runs
-the pipeline. Same compute path as before; only the UI layer changed.
+Serves a hand-built HTML front-end (index.html) and JSON endpoints that run
+the silent-mutation pipeline.
 
-Run (in the lab 'genet' env, with flask installed):
-    cd ~/co_editing/final
+Run (in a 'genet' conda env with flask installed), from the repo root:
     PYTHONPATH=. python silent_mutation/webtool/server.py
-Then expose:
+Then expose, e.g.:
     ngrok http 8502
 
 Endpoints:
     GET  /              -> index.html (the web tool)
     POST /api/analyze   -> {variant, candidates[], deepprime} as JSON
+    POST /api/verify    -> verdict for a hand-designed pegRNA, as JSON
 
 Exon-aware mode
 ---------------
@@ -278,7 +278,7 @@ def _build_variant(d):
 @app.route("/api/verify", methods=["POST"])
 def verify():
     """Verify a hand-designed pegRNA (spacer + 3' extension + PBS length)
-    against the same WT/edit window. Additive — independent of /api/analyze."""
+    against the same WT/edit window. Independent of /api/analyze."""
     d = request.get_json(force=True)
     try:
         variant = _build_variant(d)
@@ -300,11 +300,3 @@ def verify():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8502, debug=False)
-
-'''
-fuser -k 8502/tcp
-cd ~/co_editing/final
-PYTHONPATH=. python silent_mutation/webtool/server.py
-'''
-
-# https://plushlike-junie-hungrily.ngrok-free.dev
