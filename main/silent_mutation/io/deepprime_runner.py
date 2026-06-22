@@ -25,10 +25,6 @@ genet lives in the lab 'genet' conda env. It is imported lazily; failures (and
 genet's internal sys.exit() on an unsupported PE/cell combo) raise
 DeepPrimeUnavailable so the web tool falls back to the standalone view instead of
 crashing the Flask server.
-
-NOTE: `score_all_pegrnas` now takes a Variant (not seq_wt/seq_ed/alt_tag/dp_path).
-The old diagnostic scripts that called the DeepPrime-main signature won't run
-against this module — that's expected.
 """
 
 from __future__ import annotations
