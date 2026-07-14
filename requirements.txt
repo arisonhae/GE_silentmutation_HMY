@@ -1,0 +1,6 @@
+# Silent Mutation Finder - core / server build
+# Requires Python 3.10  (unify with the DeepPrime build; see requirements-deepprime.txt).
+# Standalone analyze + verify (the web tool without DeepPrime) needs only Flask.
+# The pandas dependency was removed from the core path (codon table is now read
+# with the stdlib csv module).
+flask>=3.0

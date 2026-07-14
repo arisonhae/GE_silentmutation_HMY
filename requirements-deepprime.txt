@@ -1,0 +1,11 @@
+# Optional - only needed for the "Add DeepPrime efficiency ranking" feature.
+#
+# IMPORTANT: requires Python 3.10 (or 3.9). genet depends on tensorflow<2.10,
+# which has no wheels for Python 3.11+, so installation fails there.
+# Create a 3.10 venv:  py -3.10 -m venv .venv310
+#
+# Without these, the web tool still runs the full standalone candidate list;
+# DeepPrime just reports "unavailable".
+pandas>=1.5
+genet>=0.17
+# genet in turn pulls tensorflow (<2.10) / numpy / biopython - large download.
