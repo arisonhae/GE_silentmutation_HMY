@@ -56,6 +56,7 @@ pip install -r requirements-deepprime.txt
 ```
 silent_mutation_standalone.html   설치 없이 여는 단일 파일 (1번 사용법)
 run.py                            서버 실행 (2번 사용법)
+build_standalone.py               코어 수정 시 수정 후 단일 HTML 수정용
 requirements.txt                  코어/서버 (Flask)
 requirements-deepprime.txt        선택: DeepPrime (pandas + genet)
 data/reference/codon_table.csv    코돈 테이블 (64개)
