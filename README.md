@@ -15,7 +15,7 @@ frame을 직접 지정할 수 있고, 변이가 인트론-엑손 경계(splice j
 파이썬·conda·서버 불필요
 
 - 첫 실행 때 파이썬 런타임(Pyodide)을 CDN에서 받으므로 **인터넷이 필요**함
-  (10–20초, 이후엔 브라우저 캐시라 빠르다).
+  (10–20초, 이후엔 브라우저 캐시라 빠르게 실행 가능).
 - 해당 파일 안에 `silent_mutation/` 코어가 동일하게 들어 있어 브라우저에서
   **동일한 파이썬 코드**를 실행함. 서버 버전과 결과가 100% 일치.
 - DeepPrime 랭킹은 이 파일에는 포함되지 않음(genet은 파이썬 서버 전용). 체크박스를
@@ -77,7 +77,7 @@ silent_mutation/
 
 이 프로젝트의 범위는 **silent mutation 분석까지**이며, DeepPrime은 그 뒤에 붙는 별도
 단계로 사용하였음. 추후 **deepPrime-coedit 툴**을 만들게 되면, 그때
-변경해야 할 부분은 `silent_mutation/io/deepprime_runner.py`의 `run_deepprime_silent(...)` 하나뿐이다.
+변경해야 할 부분은 `silent_mutation/io/deepprime_runner.py`의 `run_deepprime_silent(...)` 이다.
 
   - 입력: `(wt, ed, ...pe_system, cell_type, rtt_max, top_n, exon_* )`
   - 출력: 효율 내림차순으로 정렬된 pegRNA dict 리스트. 각 dict는 그 pegRNA의 silent
