@@ -1,9 +1,10 @@
 # GE_silentmutation_HMY
 
 WT/Edited 시퀀스로부터 pegRNA를 설계하고, 각 RTT 안에서 MMR을 회피하는 **silent
-co-edit**(동의 코돈 치환)을 찾아 prime editing 효율을 높이는 웹툴. 화면에서 reading
-frame을 직접 지정할 수 있고, 변이가 인트론-엑손 경계(splice junction)에 걸친 경우도
-처리한다. Substitution과 1–3bp indel을 지원하며, 효율 예측은 DeepPrime 기반.
+co-edit**(동의 코돈 치환)을 찾아 prime editing 효율을 높이는 웹툴. reading frame과 exon 구간을 직접 지정할 수 있어, 
+window에 인트론이 섞여 있어도(edit이 인트론에 있거나 exon 경계에 걸친 경우 포함) 인트론을 코돈으로 잘못 읽지
+않고 exon 안에서만 silent 마커를 찾는다. Substitution과 1–3bp indel을 지원하며,
+효율 예측은 DeepPrime 기반.
 
 ---
 
