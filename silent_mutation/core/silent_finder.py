@@ -1,19 +1,14 @@
 """
-Silent (synonymous) mutation candidate finder — v2 (codon_lookup-based).
+Silent (synonymous) mutation candidate finder.
 
 For a given (Variant, PamCandidate) pair, scan the RTT region for codons
 where one or more nucleotide substitutions would yield a synonymous codon
 (same amino acid). These candidates serve as sequence markers and as PAM
 disruptors.
 
-Key changes from v1
--------------------
-v1 read codons from seq_wt assuming 3 contiguous bases form a codon, using
-cds_frame. That breaks for codons that span exon-intron junctions (e.g.
-BRCA2 codon 23 = GAT, where 1 base is in exon 1 and 2 bases are in exon 2,
-~2.5kb apart in genome). v2 uses Variant.codon_lookup, built from the
-transcript's CDS exons in mRNA reading frame, which correctly handles
-splice-junction codons.
+Codons are read from Variant.codon_lookup (position-keyed), not by slicing
+seq_wt; positions absent from the lookup are skipped. See sequence_loader for
+how the lookup is built and what it omits.
 
 Algorithm
 ---------
