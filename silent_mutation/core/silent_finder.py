@@ -137,12 +137,6 @@ def find_silent_candidates(
     """
     Find all silent-mutation candidates inside the RTT region of one PAM.
 
-    Uses variant.codon_lookup to read codons in mRNA reading frame. Splice-
-    junction codons are handled correctly: a codon whose three bases span
-    an intron is still identified by codon_lookup, and we filter at the
-    silent-edit-position level (each silent base must be a CDS base inside
-    both seq_wt and the RTT region).
-
     Returns
     -------
     list[SilentCandidate]
