@@ -1,10 +1,15 @@
 # GE_silentmutation_HMY
 
 WT/Edited 시퀀스로부터 pegRNA를 설계하고, 각 RTT 안에서 MMR을 회피하는 **silent
-co-edit**(동의 코돈 치환)을 찾아 prime editing 효율을 높이는 웹툴. reading frame과 exon 구간을 직접 지정할 수 있어, 
-window에 인트론이 섞여 있어도(edit이 인트론에 있거나 exon 경계에 걸친 경우 포함) 인트론을 코돈으로 잘못 읽지
-않고 exon 안에서만 silent 마커를 찾는다. Substitution과 1–3bp indel을 지원하며,
-효율 예측은 DeepPrime 기반.
+co-edit**(동의 코돈 치환)을 찾아 prime editing 효율을 높이는 웹툴. reading frame과
+exon 구간을 직접 지정할 수 있어, window에 인트론이 섞여 있어도(edit이 인트론에 있거나
+exon 경계에 걸친 경우 포함) 인트론을 코돈으로 잘못 읽지 않고 exon 안에서만 silent
+마커를 찾는다. Substitution과 1–3bp indel을 지원하며, 효율 예측은 DeepPrime 기반.
+
+> **⚠️ 서열에 인트론이 섞여 있으면 exon-aware 체크박스를 켜고 exon 구간을 마킹할 것
+> (꺼짐이 기본값).** 끄면 툴이 창 전체를 CDS로 가정해 인트론을 코돈으로 읽고, 인트론
+> 염기에 "silent" 치환을 제안하게 된다. silent를 확인하는 window는 변이 기준 ±60bp라,
+> 변이가 exon 가장자리 근처면 인트론이 딸려 들어오게 된다.
 
 ---
 
@@ -106,9 +111,6 @@ HTML에 임베드하고, `fetch('/api/...')` 호출을 브라우저 내 `api.run
   121bp 창.
 - **좌표 규약**: `seq_wt`는 CDS 가닥 5'→3'; `pbs_seq`/`rtt_seq`는 PAM 가닥 5'→3'로 표기하도록 함;
   pegRNA 3' extension = `reverse_complement(pbs_seq + edited_rtt)`.
-- **Splice-junction 코돈**: `codon_lookup`이 CDS 엑손을 transcript 5'→3' 순서로 걸어
-  코돈별 실제 유전체 3개 위치를 저장한다(인트론 섞임 방지). 
-  exon-intron 경계 코돈 지원 가능
   
 ## 향후 확장 (미구현)
 
